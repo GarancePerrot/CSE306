@@ -14,29 +14,29 @@
 
 
 int main() {
-
+	clock_t start = clock(); //chronometer for execution time
+	
 	int W = 512; //width of the screen
 	int H = 512; //height of the screen
 
 	double alpha = 60 * PI /100; //horizontal field of view aka fov
 	
 	Scene s;
-	s.L = Vector(-10, 20, 40); //light source
-	s.I = 2E10; //light intensity
+	s.L = Vector(-20, 20, 60); //light source
+	s.I = 2E11; //light intensity
 	Vector C(0,0,55); //camera
 
 	s.addSphere(Sphere(Vector(0.,1000.,0.),   940.,  Vector(1,0.,0.))); //red ceiling 
-    s.addSphere(Sphere(Vector(0.,-1000.,0.),  940., Vector(0,1,0.))); //blue back wall
-    s.addSphere(Sphere(Vector(0.,0., -1000.), 940.,  Vector(0,0.,1))); //green floor
-    s.addSphere(Sphere(Vector(0.,0.,1000.),   940.,  Vector(0.8,0.,0.2))); //pink front wall
-    s.addSphere(Sphere(Vector(0.,-20.,0.),  20,  Vector(0.1,0.1,0.1), false, false)); //center sphere : isMirror, isTransparent
-	//s.addSphere(Sphere(Vector(-50.,0.,0.), 5, Vector(0., 1, 0.)));
-	//s.addSphere(Sphere(Vector(50.,0.,0.), 20, Vector(0., 0, 1.)));
+        s.addSphere(Sphere(Vector(0.,-1000.,0.),  940., Vector(0,1,0.))); //blue back wall
+        s.addSphere(Sphere(Vector(0.,0., -1000.), 940.,  Vector(0,0.,1))); //green floor
+        s.addSphere(Sphere(Vector(0.,0.,1000.),   940.,  Vector(0.8,0.,0.2))); //pink front wall
+        s.addSphere(Sphere(Vector(0.,-20.,0.),  20,  Vector(0.1,0.1,0.1), false, false)); //center sphere : isMirror, isTransparent
 
 
 	double z = -W/(2*tan(alpha/2)); 
 	
 	std::vector<unsigned char> image(W * H * 3, 0);
+	#pragma omp parallel for schedule(dynamic, 1)
 	for (int i = 0; i < H; i++) {
 		for (int j = 0; j < W; j++) {
 			double x = j-W/2+0.5;
@@ -62,10 +62,10 @@ int main() {
 		}
 	}
 	stbi_write_png("image.png", W, H, 3, &image[0], 0);
-
+	
+	clock_t end = clock();
+	double execution_time = ((double)end - start) / CLOCKS_PER_SEC;
+	std::cout << "Code ran in: " << execution_time << " seconds." << std::endl;
 	return 0;
 }
-	stbi_write_png("image.png", W, H, 3, &image[0], 0);
 
-	return 0;
-}
