@@ -26,7 +26,7 @@ int main() {
 	s.I = 2E11; //light intensity
 	Vector C(0,0,55); //camera
 
-	int NB_PATHS = 1000; 
+	int NB_PATHS = 32; 
 
 	s.addSphere(Sphere(Vector(0.,1000.,0.),   940.,  Vector(1,0.,0.))); //red ceiling 
     s.addSphere(Sphere(Vector(0.,-1000.,0.),  940., Vector(0,1,0.))); //blue back wall
