@@ -48,6 +48,9 @@ Vector operator*(const double a, const Vector& b) {
 Vector operator*(const Vector& a, const double b) {
 	return Vector(a[0]*b, a[1]*b, a[2]*b);
 }
+Vector operator*(const Vector& a, const Vector& b) {
+	return Vector(a[0]*b[0], a[1]*b[1], a[2]*b[2]); 
+}
 Vector operator/(const Vector& a, const double b) {
 	return Vector(a[0] / b, a[1] / b, a[2] / b);
 }
@@ -57,7 +60,31 @@ double dot(const Vector& a, const Vector& b) {
 Vector cross(const Vector& a, const Vector& b) {
 	return Vector(a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]);
 }
+Vector random_cos(const Vector &N) { // for indirect lighting
 
+	double r1 = uniform(engine);
+	double r2 = uniform(engine);
+	double x = cos(2*PI*r1)*sqrt(1-r2);
+	double y = sin(2*PI*r1)*sqrt(1-r2);
+	double z = sqrt(r2);
+	
+    
+	//generating the two orthogonal tangent vectors T1 and T2 : 
+	Vector T1;
+	//we detect the smallest component of N (in absolute value) and set T1 accordingly :
+	if (std::abs(N[0]) <= std::abs(N[1]) && std::abs(N[0]) <= std::abs(N[2])) { //N[0] min
+			T1 = Vector(0, -N[2], N[1]);
+		} else {
+			if (std::abs(N[1]) <= std::abs(N[0]) && std::abs(N[1]) <= std::abs(N[2])){ //N[1] min
+				T1 = Vector(-N[2], 0, N[0]);
+			} else {
+				T1 = Vector(-N[1], N[0], 0); // N[2] min
+			}
+		}
+	T1.normalize();
+	Vector T2 = cross(N, T1);
+	return x*T1 + y*T2 + z*N;
+}
 
 
 class Ray {
@@ -153,7 +180,7 @@ public:
 		double t;
 		int objectID;
 		Vector P,N; 
-		double epsilon = 0.001; //offsetting the starting point of the reflected/refracted/shadow ray off the surface to avoid numerical precision issues
+		double epsilon = 0.01; //offsetting the starting point of the reflected/refracted/shadow ray off the surface to avoid numerical precision issues
 
 		bool inter = intersect(r, P, N, objectID, t); //check if the ray has intersected an object, if so, retrieve the info
 			
@@ -168,19 +195,34 @@ public:
 
 			//Refractions : rays bounce off surfaces but passing through them
 			if (objects[objectID].isTransparent) {
-				
+						
 				 // ensuring that n1 < n2 to avoid imaginary results
-				double n1 = 1; 
+				double n1 = 1.; 
 				double n2 = 1.5;
+
 
 				Vector correctN = N;
 				if (dot(N, r.u) > 0){ //ray exiting the transparent sphere
 					// correcting refraction indices and normal sign in this case
 					correctN = -N; 
-					std::swap(n1, n2);
+					n1 = 1.5; 
+					n2 = 1.; 
 				}
-				//decomposing the transmitted direction T in tangential Tt and normal component Tn
 
+				// Fresnel law to randomly launch either a reflection ray, or a refraction ray : 
+				double k0 = sqr(n1-n2) / sqr(n1 + n2); //reflection coefficient at normal incidence
+				double R = k0 + (1 - k0)*pow((1- std::abs(dot(N, r.u))), 5); // reflection coefficient for incidence r.u
+				double t = 1 - R; // transmission coefficient
+
+				double u = uniform(engine); //a uniform random number u between 0 and 1
+				if (u < R) {
+					//we launch a reflected ray
+					Vector w_reflected = r.u - 2*dot(r.u, N) * N; //reflected direction 
+					Ray reflected(P + epsilon * N, w_reflected );
+					return getColor(reflected, ray_depth-1);
+				} //otherwise we launch a refracted ray
+
+				//decomposing the transmitted direction T in tangential Tt and normal component Tn
 				Vector Tt = (n1/ n2) * (r.u - dot(r.u, correctN) * correctN);
 
 				double d = 1 - sqr(n1 / n2) * (1 - sqr(dot(r.u, correctN)));
@@ -197,7 +239,12 @@ public:
 			}
 
 
-			//Diffuse surfaces : shading and shadows computation under the Lambertian model
+
+			// Diffuse surfaces
+
+			// direct light : 
+			// shading and shadows computation under the Lambertian model
+
 			Vector wlight = L - P;
 			double dlight2 = wlight.norm2(); 
 			double dlight = sqrt(dlight2);
@@ -215,8 +262,14 @@ public:
 					color = Vector(0,0,0);
 				}
 			}
+
+			// indirect light : add a random contribution 
+			Vector w_indirect = random_cos(N);
+			Ray randomRay(P + epsilon* N , w_indirect);
+			color += objects[objectID].albedo * getColor(randomRay, ray_depth-1);	
 		}
 		return color;
+	
 	}
 
 };
