@@ -87,6 +87,14 @@ Vector random_cos(const Vector &N) { // for indirect lighting
 }
 
 
+void boxMuller (double stdev , double &x , double &y ) {  // for antialiasing 
+	double r1 = uniform(engine);
+	double r2 = uniform(engine);
+	x = sqrt(-2 * log(r1)) *cos( 2 * PI*r2)*stdev ;
+	y = sqrt(-2 * log(r1))*sin( 2 * PI*r2) *stdev ;
+}
+
+
 class Ray {
 public:
 	Ray(Vector O, Vector u) : O(O), u(u) {};
@@ -138,10 +146,6 @@ public:
 };
 
 
-
-// class Geometry{
-// 	public virtual bool intersection()
-// }
 
 class Scene{
 public:
