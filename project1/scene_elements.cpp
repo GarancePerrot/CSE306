@@ -432,6 +432,8 @@ public:
 		t = 10E9;
 		bool has_inter = false;
 
+		if (!bbox.intersect(r)) return false;
+		
 		for (int i = 0; i < mesh->indices.size(); i++){ // for all the triangles of the mesh
 
 			// we get the three points of the triangle 
