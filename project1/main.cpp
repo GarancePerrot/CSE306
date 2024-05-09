@@ -30,13 +30,25 @@ int main() {
 	int NB_PATHS = 32; 
 
 	s.addSphere(new Sphere(Vector(0.,1000.,0.),   940.,  Vector(1,0.,0.))); //red ceiling 
-    s.addSphere(new Sphere(Vector(0.,-1000.,0.),  940., Vector(0,1,0.))); //blue back wall
-    s.addSphere(new Sphere(Vector(0.,0., -1000.), 940.,  Vector(0,0.,1))); //green floor
-    s.addSphere(new Sphere(Vector(0.,0.,1000.),   940.,  Vector(0.8,0.,0.2))); //pink front wall
-    s.addSphere(new Sphere(Vector(0.,-25.,-15.),  25,  Vector(0.1,0.1,0.1), false, false)); //center sphere : isMirror, isTransparent
+	s.addSphere(new Sphere(Vector(0.,-1000.,0.),  940., Vector(0,1,0.))); //blue back wall
+        s.addSphere(new Sphere(Vector(0.,0., -1000.), 940.,  Vector(0,0.,1))); //green floor
+	s.addSphere(new Sphere(Vector(0.,0.,1000.),   940.,  Vector(0.8,0.,0.2))); //pink front wall
+	s.addSphere(new Sphere(Vector(0.,-44.,-5.),  20,  Vector(0.1,0.1,0.1), false, false)); //center sphere : isMirror, isTransparent
 	//s.addSphere(new Sphere(Vector(-50.,0.,0.), 5, Vector(0., 1, 0.)));
 	//s.addSphere(new Sphere(Vector(50.,0.,0.), 20, Vector(0., 0, 1.)));
 
+		//adding the cat object to the scene
+	TriangleMesh* mesh = new TriangleMesh(Vector(0.3, 0.2, 0.25), false, false);
+	mesh->readOBJ("cat.obj");
+	//scaling the cat object by a factor of 0.6 and translating it by t
+	Vector t(0,-30.,0.);
+	for (int i = 0; i < mesh->vertices.size(); i++){
+		mesh->vertices[i] = mesh->vertices[i]*0.9 + t;
+	}
+	mesh->compute_bbox();
+	s.addMesh(mesh);
+
+	
 	double std_dev = 0.5;
 	double z = -W/(2*tan(alpha/2)); 
 	
@@ -84,10 +96,3 @@ int main() {
 	std::cout << "Code ran in: " << execution_time << " seconds." << std::endl;
 	return 0;
 }
-
-//g++ -fopenmp -O2 main1.cpp -o test -lgomp
-//./test
-
-
-// Questions : 
-// how to change the number of paths per pixel ? (fig 2.17 says 1000 vs 32)
