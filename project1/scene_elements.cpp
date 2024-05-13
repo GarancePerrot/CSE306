@@ -31,6 +31,17 @@ public:
 	double operator[](int i) const { return coords[i]; };
 	double& operator[](int i) { return coords[i]; };
 	double coords[3];
+
+	int get_longest() {
+		//if (coords[0] >= coords[1] && coords[2] >= coords[1]){
+		if (coords[0] >= coords[1] && coords[0] >= coords[2]){
+			return 0;
+		} 
+		if (coords[1] >= coords[0] && coords[1] >= coords[2]){
+			return 1;
+		}
+		return 2;
+	};
 };
 
 Vector operator-(const Vector& a) {
@@ -97,7 +108,7 @@ void boxMuller (double stdev , double &x , double &y ) {  // for antialiasing
 class Ray {
 public:
 	Ray(Vector O, Vector u) : O(O), u(u) {};
-    Vector O; //origin
+        Vector O; //origin
 	Vector u; //unit direction
 };
 
@@ -192,6 +203,20 @@ public:
 	}
 
 };
+
+
+
+class bvhNode{ // class to represent a BVH Node of the three, with a left and right child and indices
+//to give a range of the corresponding triangle indices
+public: 
+	
+	int from, to;	
+	bvhNode* left;  // Pointer to a child bvhNode
+	bvhNode* right; // Pointer to another child bvhNode
+	BoundingBox bbox;
+
+};
+
 
 
 
@@ -395,26 +420,67 @@ public:
  
     }
 
+    BoundingBox compute_bbox(int from, int to) { 
+		//computes the global min and max of the triangle mesh by going through all the vertices to determine the bounding box
+		// updated for bvh : iterating only on a selection of vertices
+		BoundingBox bbox;
+		double M = 10E9;
+		bbox.min = Vector(M,M,M);
+		bbox.max = Vector(-M,-M,-M);
+		
+		for (int i = from; i<to; i++){
+			for (int j= 0; j<3; j++){
+				bbox.min[j] = std::min(bbox.min[j], vertices[indices[i].vtxi][j]);
+				bbox.max[j] = std::max(bbox.max[j], vertices[indices[i].vtxi][j]);
+				bbox.min[j] = std::min(bbox.min[j], vertices[indices[i].vtxj][j]);
+				bbox.max[j] = std::max(bbox.max[j], vertices[indices[i].vtxj][j]);
+				bbox.min[j] = std::min(bbox.min[j], vertices[indices[i].vtxk][j]);
+				bbox.max[j] = std::max(bbox.max[j], vertices[indices[i].vtxk][j]);
+			}
+		}
+		return bbox;
+    }
 
-	void compute_bbox() { //computes the global min and max of the triangle mesh by going through all the vertices to determine the bounding box
-		bbox.min = std::accumulate(vertices.begin(), vertices.end(), bbox.min,
-									[](const Vector& a, const Vector& b) {
-									return Vector(std::min(a[0], b[0]), std::min(a[1], b[1]), std::min(a[2], b[2]));
-									});
-		bbox.max = std::accumulate(vertices.begin(), vertices.end(), bbox.max,
-									[](const Vector& a, const Vector& b) {
-									return Vector(std::max(a[0], b[0]), std::max(a[1], b[1]), std::max(a[2], b[2]));
-									});
-	}
+    Vector compute_barycenter(const int& i){
+		return (vertices[indices[i].vtxi] + vertices[indices[i].vtxj] + vertices[indices[i].vtxk])/3.;
+    }
 
-
-
+    void buildBVH(bvhNode* curNode, int from, int to){  // from the lecture notes p.45
+		curNode->from = from;
+		curNode->to = to;
+		curNode->left = NULL;
+		curNode->right = NULL;
+		curNode->bbox = compute_bbox(from, to); // bbox from starting triangle included to ending triangle excluded
+		Vector diag = curNode->bbox.max - curNode->bbox.min ;  
+		Vector middle_diag =  curNode->bbox.min + diag * 0.5;
+		int longest_axis = diag.get_longest();  
+		
+		int pivot = from;
+		for (int i=from ; i<to; i++){
+			Vector barycenter = compute_barycenter(i);  // to write in Triangle Indices
+			//swap guarantees that the triangles whose barycenter are smaller than middle diag are before 'pivot'
+			if (barycenter[longest_axis] < middle_diag[longest_axis]){
+				std::swap(indices[i], indices[pivot]);
+				pivot++;
+			}
+		}
+		//stopping criterion
+		if (pivot - from <= 1 || to - pivot <= 1 || to - from < 5){
+			return;
+		}
+		
+		curNode->left = new bvhNode;
+		curNode->right = new bvhNode;
+		buildBVH(curNode->left, from , pivot);
+		buildBVH(curNode->right, pivot, to);
+    }
     std::vector<TriangleIndices> indices;
     std::vector<Vector> vertices;
     std::vector<Vector> normals;
     std::vector<Vector> uvs;
     std::vector<Vector> vertexcolors;
-	BoundingBox bbox;
+    BoundingBox bbox;
+    bvhNode bvh;
     
 };
 
@@ -427,48 +493,70 @@ public:
 	Vector P, N;
 	double t; 
 
-	bool intersect(const Ray& r) { //implementation of Möller Trumbore algorithm
+		bool intersect(const Ray& r) { //implementation of Möller Trumbore algorithm
 
 		t = 10E9;
 		bool has_inter = false;
 
-		if (!bbox.intersect(r)) return false;
-		
-		for (int i = 0; i < mesh->indices.size(); i++){ // for all the triangles of the mesh
+		//begin BVH section (code from the lecture notes p.46)
+		if (!mesh->bvh.bbox.intersect(r)){
+			return false;
+		}
+		std::list<const bvhNode*> nodes_to_visit;
+		nodes_to_visit.push_back(&mesh->bvh);
+		//double best_inter_distance = std::numerical_limits<double>::max();
+		while (!nodes_to_visit.empty()){
+			const bvhNode* curNode = nodes_to_visit.front();
+			nodes_to_visit.pop_front();
+			//if there is one child, then it is not a leaf so test the bounding box
+			if (curNode->left){
+				if (curNode->left->bbox.intersect(r)){
+					nodes_to_visit.push_back(curNode->left);
+				}
+				if (curNode->right->bbox.intersect(r)){
+					nodes_to_visit.push_back(curNode->right);
+				}
+			}// end BVH section
+			else {
+				//testing all triangles between curNode->from and curNode->to 
+				//if an intersection is found, update best_inter_distance if needed
+				
+				for (int i = curNode->from; i < curNode->to; i++){ // for all the triangles of the mesh (indices updated for BVH)
 
-			// we get the three points of the triangle 
-			const Vector& A = mesh->vertices[mesh->indices[i].vtxi];
-			const Vector& B = mesh->vertices[mesh->indices[i].vtxj];
-			const Vector& C = mesh->vertices[mesh->indices[i].vtxk];
+					// we get the three points of the triangle 
+					const Vector& A = mesh->vertices[mesh->indices[i].vtxi];
+					const Vector& B = mesh->vertices[mesh->indices[i].vtxj];
+					const Vector& C = mesh->vertices[mesh->indices[i].vtxk];
 
-			// we get the vectors e1 and e2 
-			// and solve the system using Cramer
-			Vector e1 = B - A;
-			Vector e2 = C - A;
-			Vector d1 = A - r.O; 
-			Vector d2 = cross(d1, r.u);
-			Vector triangle_N = cross(e1, e2); 
-			double beta = dot(e2, d2) / dot(r.u, triangle_N);
-			double gamma = - dot(e1, d2) / dot(r.u, triangle_N);
-			double alpha = 1 - beta - gamma; 
-			double triangle_t = dot(d1, triangle_N) / dot(r.u, triangle_N);
+					// we get the vectors e1 and e2 
+					// and solve the system using Cramer
+					Vector e1 = B - A;
+					Vector e2 = C - A;
+					Vector d1 = A - r.O; 
+					Vector d2 = cross(d1, r.u);
+					Vector triangle_N = cross(e1, e2); 
+					double beta = dot(e2, d2) / dot(r.u, triangle_N);
+					double gamma = - dot(e1, d2) / dot(r.u, triangle_N);
+					double alpha = 1 - beta - gamma; 
+					double triangle_t = dot(d1, triangle_N) / dot(r.u, triangle_N);
 
-			if ((triangle_t < 0) | (beta < 0) | (beta > 1) | (gamma < 0) | (gamma > 1) | (alpha < 0)){ //no intersection for this triangle
-				continue;  //start at next iteration = continue checking for intersections for the other triangles of the mesh
-			}
+					if ((triangle_t < 0) || (beta < 0) || (beta > 1) || (gamma < 0) || (gamma > 1) || (alpha < 0)){ //no intersection for this triangle
+						continue;  //start at next iteration = continue checking for intersections for the other triangles of the mesh
+					}
 
-			has_inter = true;
-			// we retrieve t, the point of intersection P and the unit normal at P
-			if (triangle_t < t){ // the relevant intersection is the one w/ the lowest t (closer to the ray origin)
-				t = triangle_t;
-				N = triangle_N;
-				P = r.O + t * r.u;
-			}
+					has_inter = true;
+					// we retrieve t, the point of intersection P and the unit normal at P
+					if (triangle_t < t){ // the relevant intersection is the one w/ the lowest t (closer to the ray origin)
+						t = triangle_t;
+						N = triangle_N;
+						P = r.O + t * r.u;
+					}
+				}
+		    }
 		}
 		N.normalize();
 		return has_inter;
 	}
-
 };
 
 
