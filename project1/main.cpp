@@ -43,10 +43,10 @@ int main() {
 	//scaling the cat object by a factor of 0.6 and translating it by t
 	//Vector t(0,-30.,0.);
 	Vector t(-40, -20, 15);
-	double s = 0.6; 
-	//double s = 0.9; //scaling factor
+	double scale = 0.6; 
+	//double scale = 0.9; //scaling factor
 	for (int i = 0; i < mesh->vertices.size(); i++){
-		mesh->vertices[i] = mesh->vertices[i]*s + t;
+		mesh->vertices[i] = mesh->vertices[i]*scale + t;
 	}
 	//mesh->compute_bbox();
 	mesh->buildBVH(&mesh->bvh, 0, mesh->indices.size()); // build the first BVH : the root of the tree (will call itself recursively)
