@@ -41,11 +41,15 @@ int main() {
 	TriangleMesh* mesh = new TriangleMesh(Vector(0.3, 0.2, 0.25), false, false);
 	mesh->readOBJ("cat.obj");
 	//scaling the cat object by a factor of 0.6 and translating it by t
-	Vector t(0,-30.,0.);
+	//Vector t(0,-30.,0.);
+	Vector t(-40, -20, 15);
+	double s = 0.6; 
+	//double s = 0.9; //scaling factor
 	for (int i = 0; i < mesh->vertices.size(); i++){
-		mesh->vertices[i] = mesh->vertices[i]*0.9 + t;
+		mesh->vertices[i] = mesh->vertices[i]*s + t;
 	}
-	mesh->compute_bbox();
+	//mesh->compute_bbox();
+	mesh->buildBVH(&mesh->bvh, 0, mesh->indices.size()); // build the first BVH : the root of the tree (will call itself recursively)
 	s.addMesh(mesh);
 
 	
