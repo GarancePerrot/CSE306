@@ -69,7 +69,8 @@ public:
     std::vector<Vector> vertices;
 };  
 
-
+// computes the intersection point between bisector of [P0,Pi] and given edge [AB] of a polygon
+// from slides p.61
 Vector intersection_point(const Vector& P0, const Vector& Pi, const Vector& A, const Vector& B ){ //add comment
     Vector M = (P0 + Pi ) * 0.5;
     double t = dot(M-A, Pi-P0) / dot(B-A, Pi-P0);
@@ -77,6 +78,7 @@ Vector intersection_point(const Vector& P0, const Vector& Pi, const Vector& A, c
     return P; 
 }
 
+// checks if X follows the definition of the Voronoi cell (slides p.61)
 bool is_inside(const Vector& point,  const Vector& P0, const Vector& Pi) { // add comment 
         if ((point-P0).norm2()<=(point-Pi).norm2()){
             return true; 
@@ -85,26 +87,32 @@ bool is_inside(const Vector& point,  const Vector& P0, const Vector& Pi) { // ad
     }
 
 
-// Sutherland Hodgman to clip cell by bisector P0Pi
+// Sutherland Hodgman to clip cell by bisector of [P0,Pi]
+// overall algorithm to remove 1 half-space (slides p.16)
 Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, const Vector& Pi ){
-    Polygon result; 
+    Polygon result;                         // create a new empty polygon
+    Vector A(0,0,0);
+    Vector B(0,0,0);
     int N = cell.vertices.size();
-    // for each edge of the polygon , compute if needed a point of intersection 
-    // depending on the size of each vertex of the edge, I decide if I keep it or not
-    for (int i=0; i< N; i++){
-        const Vector& A = cell.vertices[i == 0 ? (N-1) : i-1]; 
-        const Vector& B = cell.vertices[i]; 
-        if (is_inside(B, P0,Pi)){            //if B is inside (if follows the definition of the Voronoi cell of the point P0)  - slides p.61
-            if ( ! is_inside(A, P0,Pi)){         // A is outside      
-                Vector P = intersection_point(P0,Pi,A,B);
-                result.vertices.push_back(P);
+
+    for (int i=0; i< N; i++){                        // iterate over the edges
+        if (i==0){                                   // we take the index (i-1)%N
+            A = cell.vertices[N-1];
+        } else {
+            A = cell.vertices[i-1];
+        } 
+        B = cell.vertices[i]; 
+        if (is_inside(B, P0,Pi)){                //if B is inside
+            if ( ! is_inside(A, P0,Pi)){         // if A is outside      
+                Vector P = intersection_point(P0,Pi,A,B);   // we compute the point of intersection P
+                result.vertices.push_back(P);              // and add it
             }
-            result.vertices.push_back(B);
+            result.vertices.push_back(B);   
         }
         else {
-            if (is_inside(A, P0,Pi)){       // A is inside
-                Vector P = intersection_point(P0,Pi,A,B);
-                result.vertices.push_back(P);
+            if (is_inside(A, P0,Pi)){       // A is inside  
+                Vector P = intersection_point(P0,Pi,A,B);  // compute P
+                result.vertices.push_back(P);         // add P
             }
         }
     }
@@ -115,23 +123,27 @@ class Voronoi{
 public: 
     Voronoi(){
     }
-    void compute(){
-        Polygon square; 
+    void compute(){  // computes the voronoi cell for each point
+        Polygon square;  
         square.vertices.push_back(Vector(0,0,0));  // anti-clockwise 
         square.vertices.push_back(Vector(1,0,0));
         square.vertices.push_back(Vector(1,1,0));
         square.vertices.push_back(Vector(0,1,0));
 
+        // square.vertices.push_back(Vector(0,0,0));  // clockwise -> does not change anything, even runtime
+        // square.vertices.push_back(Vector(0,1,0));  
+        // square.vertices.push_back(Vector(1,1,0));
+        // square.vertices.push_back(Vector(1,0,0));
+
         cells.resize(points.size());
-#pragma omp parallel for
+#pragma omp parallel for  // parallelize the computation of Voronoi cells for each point
         for (int i= 0 ; i<points.size(); i++){
-            //cell i
-            Polygon cell = square; 
-            for (int j= 0 ; j< points.size(); j++){
-                if (i==j) continue;
-                cell = clip_by_bisector(cell, points[i], points[j]); // clip the cell with the bissector of the two points 
+            Polygon cell = square;              // initial cell shape
+            for (int j= 0 ; j< points.size(); j++){   // iterating over all other points
+                if (i==j) continue;                   // excluding itself
+                cell = clip_by_bisector(cell, points[i], points[j]); // clip the current cell with the bissector of the two points 
             }
-            cells[i] = cell;
+            cells[i] = cell;   // storing clipped polygon in cells
         }
     }
     std::vector<Vector> points; //within [0,1]
