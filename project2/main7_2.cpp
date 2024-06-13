@@ -18,6 +18,15 @@ void draw_result(int N){
 }
 
 int main(){
+
+    // checking if an old file "OT.svg" exists and removes it if so because 
+    // otherwise it messes up with the optimization
+    std::string filename = "OT.svg";
+    std::filesystem::path current_path = std::filesystem::current_path();
+    std::filesystem::path file_path = current_path / filename;
+    if (std::filesystem::exists(file_path)) {
+        std::filesystem::remove(file_path);
+    } 
     clock_t start = clock(); //chronometer for execution time
 
     // displays cells for a random set of N points: 
