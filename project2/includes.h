@@ -14,6 +14,8 @@
 #include <list>
 #include <iostream>
 #include <sstream>
+#include <filesystem>
+#include <fstream>
 #include "lbfgs.h"
 
 //static std::default_random_engine engine(10) ; 
