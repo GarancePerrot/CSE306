@@ -17,7 +17,7 @@
 #include <filesystem>
 #include <fstream>
 #include "lbfgs.h"
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
 
-//static std::default_random_engine engine(10) ; 
-//static std::uniform_real_distribution<double> uniform(0,1) ;
 #endif 
