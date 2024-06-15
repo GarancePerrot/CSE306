@@ -325,7 +325,7 @@ int sgn(double x){  // used in save_frame
     return 0;
 }
 
-void save_frame(const std::vector<Polygon> &cells, std::string filename, int frameid = 0) {
+void save_frame(int N, const std::vector<Polygon> &cells, std::string filename, int frameid = 0) {
     int W = 1000, H = 1000;
     std::vector<unsigned char> image(W*H * 3, 255);
 #pragma omp parallel for schedule(dynamic)
@@ -369,11 +369,11 @@ void save_frame(const std::vector<Polygon> &cells, std::string filename, int fra
                     mindistEdge = std::min(mindistEdge, distEdge);
                 }
                 if (isInside) {
-                    //if (i < N) {   // the N first particles may represent fluid, displayed in blue
-                    //  image[((H - y - 1)*W + x) * 3] = 0;
-                    //  image[((H - y - 1)*W + x) * 3 + 1] = 0;
-                    //  image[((H - y - 1)*W + x) * 3 + 2] = 255;
-                    //}
+                    if (i < N) {   // the N first particles may represent fluid, displayed in blue
+                     image[((H - y - 1)*W + x) * 3] = 0;
+                     image[((H - y - 1)*W + x) * 3 + 1] = 0;
+                     image[((H - y - 1)*W + x) * 3 + 2] = 255;
+                    }
                     if (mindistEdge <= 2) {
                         image[((H - y - 1)*W + x) * 3] = 0;
                         image[((H - y - 1)*W + x) * 3 + 1] = 0;
@@ -426,7 +426,7 @@ public :
         OT.diagram.points = positions; // random set of points
         OT.optimize();
         for (int i = 0 ; i < nb_steps ; i++){
-            save_frame(OT.diagram.cells, "anim", i);
+            save_frame(N, OT.diagram.cells, "anim", i);
             time_step(0.002);   // dt = 0.002
         }
     }
