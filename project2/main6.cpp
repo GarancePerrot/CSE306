@@ -27,7 +27,7 @@ void draw_voronoi(int N){
     Voronoi vor; 
     vor.points.resize(N);
     for (int i= 0 ; i<N; i++ ){
-        vor.points[i] = Vector(rand()/ double(RAND_MAX),rand()/ double(RAND_MAX), 0 );
+        vor.points[i] = Vector(uniform(engine)/ double(RAND_MAX),uniform(engine)/ double(RAND_MAX), 0 );
     }
     vor.compute();
     save_svg(vor.cells, "Voronoi_cells.svg");
