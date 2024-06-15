@@ -21,4 +21,7 @@
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
 
+static std::default_random_engine engine(200) ; 
+static std::uniform_real_distribution<double> uniform(0.,double(RAND_MAX)-1) ;
+
 #endif 
