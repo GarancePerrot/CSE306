@@ -133,8 +133,8 @@ bool is_inside(const Vector& X, const Vector& P0, double w0, const Vector& Pi, d
 
 
 // Sutherland Hodgman algo
-Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, double w0,  const Vector& Pi , double wi){
-    Polygon result;                         // create a new empty polygon
+void clip_by_bisector(Polygon& result, const Polygon& cell, const Vector& P0, double w0,  const Vector& Pi , double wi){
+    
     Vector A(0,0,0);
     Vector B(0,0,0);
     Vector offset = (w0 - wi) / (2 * (P0- Pi).norm2()) * (Pi-P0);
@@ -163,7 +163,6 @@ Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, double w0,  cons
             }
         }
     }
-    return result;
 }
 
 
@@ -185,11 +184,10 @@ bool is_inside_new(const Vector& u,  const Vector& vec, const Vector& normal) {
 
 //clips the current cell by the line defined by points u and v
 //similar as clip_by_bisector but using new definitions of intersection_point and is_inside
-Polygon clip_by_line( const Polygon& cell, const Vector& u,  const Vector& v){
+void clip_by_line( Polygon& result, const Polygon& cell, const Vector& u,  const Vector& v){
 
     Vector normal(v[1] - u[1],u[0] - v[0], 0);
     int N = cell.vertices.size();
-    Polygon result;                         // create a new empty polygon
     Vector A(0,0,0);
     Vector B(0,0,0);
 
@@ -214,7 +212,6 @@ Polygon clip_by_line( const Polygon& cell, const Vector& u,  const Vector& v){
             }
         }
     }
-    return result;
 }
 
 
@@ -245,19 +242,25 @@ public:
 #pragma omp parallel for  // parallelize the computation of cells for each point
         for (int i= 0 ; i < points.size(); i++){
             Polygon cell = square;              // initial cell shape
+	    Polygon res ; 
+            res.vertices.reserve(points.size());
             for (int j= 0 ; j< points.size(); j++){   // iterating over all other points
                 if (i==j) continue;                   // excluding itself
-                cell = clip_by_bisector(cell, points[i], weights[i], points[j], weights[j]); // clip the current cell with the bissector of the two points 
-            }
+                res.vertices.clear();
+		clip_by_bisector(res, cell, points[i], weights[i], points[j], weights[j]); // clip the current cell with the bissector of the two points 
+            	std::swap(res,cell);
+	    }
             
             // performing an additional clipping step using a series of lines defined by points on a circle
             // (refining the bounding of cells can help for incompressibility)
             for (int j= 0 ; j< Ncircle; j++){
                 if (i==j) continue;   
+		res.vertices.clear();
                 double radius = sqrt(weights[i] - w_air) ; //radius of circle intersecting the polygon, proportional to point's weight              
                 Vector u = circle[j] * radius + points[i]; // defined on the perimeter of the circle centered at points[i]
                 Vector v = circle[(j+1)%Ncircle] * radius + points[i]; // defined on the perimeter of the circle and adjacent to u
-                cell = clip_by_line(cell, u, v);
+                clip_by_line(res, cell, u, v);
+		std::swap(res, cell);
 
             }
 
@@ -269,7 +272,6 @@ public:
     std::vector<Polygon> cells; 
 
 
-    // TO COMMENT 
     double w_air;
     static const int Ncircle = 20;
     Vector circle[Ncircle];
@@ -277,7 +279,7 @@ public:
 };
 
 
-class SemiDiscreteOT { // sets up and solves a Semi-Discrete Optimal Transport problem using L-BFGS optimization
+class SemiDiscreteOT { // sets up and solves a Semi-Discrete Optimal Transport problem using lbfgs optimization
 public : 
     SemiDiscreteOT(){
 
