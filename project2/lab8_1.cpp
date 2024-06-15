@@ -132,8 +132,8 @@ bool is_inside(const Vector& X,  const Vector& P0, double w0, const Vector& Pi, 
 
 
 // Sutherland Hodgman algo
-Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, double w0,  const Vector& Pi , double wi){
-    Polygon result;                         // create a new empty polygon
+void clip_by_bisector(Polygon& result, const Polygon& cell, const Vector& P0, double w0,  const Vector& Pi , double wi){
+    
     Vector A(0,0,0);
     Vector B(0,0,0);
     Vector offset = (w0 - wi) / (2 * (P0- Pi).norm2()) * (Pi-P0);
@@ -162,7 +162,6 @@ Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, double w0,  cons
             }
         }
     }
-    return result;
 }
 
 class PowerDiagram{
@@ -185,10 +184,14 @@ public:
 #pragma omp parallel for  // parallelize the computation of cells for each point
         for (int i= 0 ; i<points.size(); i++){
             Polygon cell = square;              // initial cell shape
+	    Polygon res; 
+	    res.vertices.reserve(50);
             for (int j= 0 ; j< points.size(); j++){   // iterating over all other points
                 if (i==j) continue;                   // excluding itself
-                cell = clip_by_bisector(cell, points[i], weights[i], points[j], weights[j]); // clip the current cell with the bissector of the two points 
-            }
+                res.vertices.clear();
+		clip_by_bisector(cell, points[i], weights[i], points[j], weights[j]); // clip the current cell with the bissector of the two points 
+                std::swap(res,cell);
+	    }
             cells[i] = cell;   // storing clipped polygon in cells
         }
     }
