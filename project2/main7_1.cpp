@@ -7,8 +7,8 @@ void draw_powerdiag(int N){
     diag.points.resize(N);
     diag.weights.resize(N);
     for (int i= 0 ; i<N; i++ ){
-        diag.points[i] = Vector(rand()/ double(RAND_MAX),rand()/ double(RAND_MAX), 0 );
-        diag.weights[i] = rand()/ double(RAND_MAX);
+        diag.points[i] = Vector(uniform(engine)/ double(RAND_MAX),uniform(engine)/ double(RAND_MAX), 0 );
+        diag.weights[i] = uniform(engine)/ double(RAND_MAX);
     }
     diag.compute();
     save_svg(diag.cells, "Power_diagram.svg");
