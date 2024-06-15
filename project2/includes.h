@@ -16,6 +16,7 @@
 #include <sstream>
 #include <filesystem>
 #include <fstream>
+#include <cstdio> 
 #include "lbfgs.h"
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "stb_image_write.h"
