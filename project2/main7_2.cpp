@@ -9,8 +9,8 @@ void draw_result(int N){
     ot.diagram.points.resize(N);
     ot.diagram.weights.resize(N);
     for (int i= 0 ; i<N; i++ ){
-        ot.diagram.points[i] = Vector(rand()/ double(RAND_MAX),rand()/ double(RAND_MAX), 0 );
-        ot.diagram.weights[i] = rand()/ double(RAND_MAX);
+        ot.diagram.points[i] = Vector(uniform(engine)/ double(RAND_MAX),uniform(engine)/ double(RAND_MAX), 0 );
+        ot.diagram.weights[i] = uniform(engine)/ double(RAND_MAX);
     }
     ot.optimize();
     save_svg(ot.diagram.cells, "OT.svg");
