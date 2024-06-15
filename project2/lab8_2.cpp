@@ -522,7 +522,7 @@ public :
         positions.resize(N);
         velocity.resize(N, Vector(0,0,0));
         for (int i = 0; i < N; i++){
-            positions[i] = Vector(rand()/ double(RAND_MAX),rand()/ double(RAND_MAX), 0);
+            positions[i] = Vector(uniform(engine)/ double(RAND_MAX),uniform(engine)/ double(RAND_MAX), 0);
         }
         OT.diagram.points = positions; // random set of points
         OT.optimize();
