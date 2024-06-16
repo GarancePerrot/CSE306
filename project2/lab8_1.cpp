@@ -134,20 +134,14 @@ bool is_inside(const Vector& X,  const Vector& P0, double w0, const Vector& Pi, 
 // Sutherland Hodgman algo
 void clip_by_bisector(Polygon& result, const Polygon& cell, const Vector& P0, double w0,  const Vector& Pi , double wi){
     
-    Vector A(0,0,0);
-    Vector B(0,0,0);
     Vector offset = (w0 - wi) / (2 * (P0- Pi).norm2()) * (Pi-P0);
     Vector M = (P0 + Pi ) *0.5;          // midpoint of bisector
     Vector Mprime = M + offset;
     int N = cell.vertices.size();
 
     for (int i=0; i< N; i++){                        // iterate over the edges
-        if (i==0){                                   // we take the index (i-1)%N
-            A = cell.vertices[N-1];
-        } else {
-            A = cell.vertices[i-1];
-        } 
-        B = cell.vertices[i]; 
+        const Vector& A = cell.vertices[i==0?(N-1): i-1];
+	const Vector& B = cell.vertices[i];
         if (is_inside(B, P0,w0,Pi,wi)){                //if B is inside
             if ( ! is_inside(A, P0,w0, Pi, wi)){         // if A is outside      
                 Vector P = intersection_point(Mprime, P0,Pi, A,B);   // we compute the point of intersection P
@@ -281,6 +275,11 @@ public :
         int ls
         )
     {
+	for (int i = 0; i< n; i++){
+		diagram.weights[i] = x[i];
+	}
+	diagram.compute();
+	    
         printf("Iteration %d:\n", k);   // prints info about current iteration
         printf("  fx = %f\n", fx);
         printf("  xnorm = %f, gnorm = %f, step = %f\n", xnorm, gnorm, step);
@@ -297,8 +296,8 @@ public :
         double objectivefct = -1;
         lbfgs_parameter_t param;
         lbfgs_parameter_init(&param);
-        param.linesearch = LBFGS_LINESEARCH_BACKTRACKING; // line search algorithm to use (default : LBFGS_LINESEARCH_MORETHUENTE, quicker )
-        param.max_iterations = 1000; // sets a maximum number of iterations (default : 0 ,runs until convergence)
+        param.linesearch = LBFGS_LINESEARCH_BACKTRACKING_WOLFE; // line search algorithm to use (default : LBFGS_LINESEARCH_MORETHUENTE, quicker )
+        param.max_iterations = 100; // sets a maximum number of iterations (default : 0 ,runs until convergence)
         param.epsilon = 1e-8; // sets a convergence tolerance for the gradient norm (default : 1e-5)
 
         std::vector<double> optimized_weights(N);
