@@ -8,8 +8,8 @@ int main(){
     clock_t start = clock(); //chronometer for execution time
 
     Fluid fluid;
-    int nb_points = 50; 
-    int nb_steps = 100;
+    int nb_points = 100; 
+    int nb_steps = 157;
     fluid.simulate(nb_points, nb_steps); 
 
     clock_t end = clock();
