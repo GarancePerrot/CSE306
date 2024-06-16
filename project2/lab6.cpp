@@ -91,17 +91,12 @@ bool is_inside(const Vector& point,  const Vector& P0, const Vector& Pi) { // ad
 // overall algorithm to remove 1 half-space (slides p.16)
 Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, const Vector& Pi ){
     Polygon result;                         // create a new empty polygon
-    Vector A(0,0,0);
-    Vector B(0,0,0);
+
     int N = cell.vertices.size();
 
     for (int i=0; i< N; i++){                        // iterate over the edges
-        if (i==0){                                   // we take the index (i-1)%N
-            A = cell.vertices[N-1];
-        } else {
-            A = cell.vertices[i-1];
-        } 
-        B = cell.vertices[i]; 
+        const Vector& A = cell.vertices[i==0?(N-1): i-1];
+	const Vector& B = cell.vertices[i];
         if (is_inside(B, P0,Pi)){                //if B is inside
             if ( ! is_inside(A, P0,Pi)){         // if A is outside      
                 Vector P = intersection_point(P0,Pi,A,B);   // we compute the point of intersection P
@@ -139,9 +134,13 @@ public:
 #pragma omp parallel for  // parallelize the computation of Voronoi cells for each point
         for (int i= 0 ; i<points.size(); i++){
             Polygon cell = square;              // initial cell shape
+            Polygon res ; 
+            res.vertices.reserve(50);
             for (int j= 0 ; j< points.size(); j++){   // iterating over all other points
                 if (i==j) continue;                   // excluding itself
-                cell = clip_by_bisector(cell, points[i], points[j]); // clip the current cell with the bissector of the two points 
+                res.vertices.clear();
+                clip_by_bisector(res, cell, points[i], weights[i], points[j], weights[j]); // clip the current cell with the bissector of the two points 
+                std::swap(res,cell); 
             }
             cells[i] = cell;   // storing clipped polygon in cells
         }
