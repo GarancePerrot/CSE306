@@ -89,8 +89,7 @@ bool is_inside(const Vector& point,  const Vector& P0, const Vector& Pi) { // ad
 
 // Sutherland Hodgman to clip cell by bisector of [P0,Pi]
 // overall algorithm to remove 1 half-space (slides p.16)
-Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, const Vector& Pi ){
-    Polygon result;                         // create a new empty polygon
+void clip_by_bisector(Polygon& result, const Polygon& cell, const Vector& P0, const Vector& Pi ){
 
     int N = cell.vertices.size();
 
@@ -111,7 +110,7 @@ Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, const Vector& Pi
             }
         }
     }
-    return result;
+    //return result; // changed Polygon into void
 }
 
 class Voronoi{
