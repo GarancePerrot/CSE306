@@ -87,22 +87,16 @@ bool is_inside(const Vector& X,  const Vector& P0, double w0, const Vector& Pi, 
 
 // Sutherland Hodgman algo modified for power diagram 
 // added weights when check is_inside, new middle point when check intersection, 
-Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, double w0,  const Vector& Pi , double wi){
-    Polygon result;                         // create a new empty polygon
-    Vector A(0,0,0);
-    Vector B(0,0,0);
+void clip_by_bisector(Polygon& result, const Polygon& cell, const Vector& P0, double w0,  const Vector& Pi , double wi){
+
     Vector offset = (w0 - wi) / (2 * (P0- Pi).norm2()) * (Pi-P0);
     Vector M = (P0 + Pi ) *0.5;          // midpoint of bisector
     Vector Mprime = M + offset;           // new middle point 
     int N = cell.vertices.size();
 
     for (int i=0; i< N; i++){                        // iterate over the edges
-        if (i==0){                                   // we take the index (i-1)%N
-            A = cell.vertices[N-1];
-        } else {
-            A = cell.vertices[i-1];
-        } 
-        B = cell.vertices[i]; 
+	const Vector& A = cell.vertices[i==0?(N-1): i-1];
+	const Vector& B = cell.vertices[i];
         if (is_inside(B, P0,w0,Pi,wi)){                //if B is inside
             if ( ! is_inside(A, P0,w0, Pi, wi)){         // if A is outside      
                 Vector P = intersection_point(Mprime, P0,Pi, A,B);   // we compute the point of intersection P
@@ -117,7 +111,6 @@ Polygon clip_by_bisector(const Polygon& cell, const Vector& P0, double w0,  cons
             }
         }
     }
-    return result;
 }
 
 class PowerDiagram{  // added weights in clip_by_bisector
@@ -140,9 +133,13 @@ public:
 #pragma omp parallel for  // parallelize the computation of cells for each point
         for (int i= 0 ; i<points.size(); i++){
             Polygon cell = square;              // initial cell shape
+            Polygon res ; 
+            res.vertices.reserve(50);
             for (int j= 0 ; j< points.size(); j++){   // iterating over all other points
                 if (i==j) continue;                   // excluding itself
-                cell = clip_by_bisector(cell, points[i], weights[i], points[j], weights[j]); // clip the current cell with the bissector of the two points 
+                res.vertices.clear();
+                clip_by_bisector(res, cell, points[i], weights[i], points[j], weights[j]); // clip the current cell with the bissector of the two points 
+                std::swap(res,cell);
             }
             cells[i] = cell;   // storing clipped polygon in cells
         }
