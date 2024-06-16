@@ -135,20 +135,14 @@ bool is_inside(const Vector& X, const Vector& P0, double w0, const Vector& Pi, d
 // Sutherland Hodgman algo
 void clip_by_bisector(Polygon& result, const Polygon& cell, const Vector& P0, double w0,  const Vector& Pi , double wi){
     
-    Vector A(0,0,0);
-    Vector B(0,0,0);
     Vector offset = (w0 - wi) / (2 * (P0- Pi).norm2()) * (Pi-P0);
     Vector M = (P0 + Pi ) *0.5;          // midpoint of bisector
     Vector Mprime = M + offset;
     int N = cell.vertices.size();
 
     for (int i=0; i< N; i++){                        // iterate over the edges
-        if (i==0){                                   // we take the index (i-1)%N
-            A = cell.vertices[N-1];
-        } else {
-            A = cell.vertices[i-1];
-        } 
-        B = cell.vertices[i]; 
+        const Vector& A = cell.vertices[i==0?(N-1): i-1];
+	const Vector& B = cell.vertices[i];
         if (is_inside(B, P0,w0,Pi,wi)){                //if B is inside
             if ( ! is_inside(A, P0,w0, Pi, wi)){         // if A is outside      
                 Vector P = intersection_point(Mprime, P0,Pi, A,B);   // we compute the point of intersection P
@@ -188,16 +182,10 @@ void clip_by_line( Polygon& result, const Polygon& cell, const Vector& u,  const
 
     Vector normal(v[1] - u[1],u[0] - v[0], 0);
     int N = cell.vertices.size();
-    Vector A(0,0,0);
-    Vector B(0,0,0);
 
     for (int i=0; i< N; i++){                        // iterate over the edges
-        if (i==0){                                   // we take the index (i-1)%N
-            A = cell.vertices[N-1];
-        } else {
-            A = cell.vertices[i-1];
-        } 
-        B = cell.vertices[i]; 
+        const Vector& A = cell.vertices[i==0?(N-1): i-1];
+	const Vector& B = cell.vertices[i];
         if (is_inside_new(u, B, normal)){                //if B is inside
             if ( ! is_inside_new(u , A , normal)){         // if A is outside      
                 Vector P = intersection_point_new(u, A , B , normal);   // we compute the point of intersection P
@@ -372,6 +360,13 @@ public :
         int ls
         )
     {
+
+	for (int i = 0; i< n-1; i++){
+		diagram.weights[i] = x[i];
+	}
+	diagram.w_air = x[n-1];
+	diagram.compute();
+	    
         printf("Iteration %d:\n", k);   // prints info about current iteration
         printf("  fx = %f\n", fx);
         printf("  xnorm = %f, gnorm = %f, step = %f\n", xnorm, gnorm, step);
@@ -401,7 +396,6 @@ public :
             
         }
        
-        //lbfgs(N, &optimized_weights[0], &objectivefct, _evaluate, _progress, this, &param);
         lbfgs(N+1, &optimized_weights[0], &objectivefct, _evaluate, _progress, this, &param);
     }
 
@@ -467,11 +461,11 @@ void save_frame(const std::vector<Polygon> &cells, std::string filename, int fra
                     mindistEdge = std::min(mindistEdge, distEdge);
                 }
                 if (isInside) {  // UNCOMMENT FOR BLUE PARTICLES
-                    // if (i < N) {   // the N first particles may represent fluid, displayed in blue
-                    //     image[((H - y - 1)*W + x) * 3] = 0;
-                    //     image[((H - y - 1)*W + x) * 3 + 1] = 0;
-                    //     image[((H - y - 1)*W + x) * 3 + 2] = 255;
-                    // }
+                    if (i < cells.size()) {   // the N first particles may represent fluid, displayed in blue
+                        image[((H - y - 1)*W + x) * 3] = 0;
+                        image[((H - y - 1)*W + x) * 3 + 1] = 0;
+                        image[((H - y - 1)*W + x) * 3 + 2] = 255;
+                    }
                     if (mindistEdge <= 2) {
                         image[((H - y - 1)*W + x) * 3] = 0;
                         image[((H - y - 1)*W + x) * 3 + 1] = 0;
